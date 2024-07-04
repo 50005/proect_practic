@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vacancies</title>
+    <style>
+        #total-vacancies-display {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div id="total-vacancies-display">
+        <p>Total vacancies: <span id="total-vacancies">{{ total_vacancies }}</span></p>
+    </div>
+
+    <h1>Vacancies</h1>
+    <form id="filter-form" method="get">
+        <select name="filter">
+            <option value="name" {% if filter_type == 'name' %}selected{% endif %}>Name</option>
+            <option value="salary" {% if filter_type == 'salary' %}selected{% endif %}>Salary</option>
+        </select>
+        <input type="text" name="value" placeholder="Value" value="{{ value }}">
+        <button type="submit">Filter</button>
+    </form>
+
+    <form id="run-parse-form" method="post" action="{% url 'run_parse_vacancies' %}">
+        {% csrf_token %}
+        <input type="hidden" name="filter" value="{{ filter_type }}">
+        <input type="hidden" name="value" value="{{ value }}">
+        <input type="number" name="pages" min="1" value="1"> <!-- Поле для ввода количества страниц -->
+        <button type="submit">Run Parse Vacancies</button>
+    </form>
+
+    <div id="status-message" style="display:none;">
+        <p>Updating database, please wait...</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                {% if filter_type == 'name' %}
+                <th>Name</th>
+                <th>Link</th>
+                {% elif filter_type == 'salary' %}
+                <th>Salary From</th>
+                <th>Salary To</th>
+                <th>Link</th>
+                {% else %}
+                <th>ID</th>
+                <th>Name</th>
+                <th>Salary From</th>
+                <th>Salary To</th>
+                <th>Working Days</th>
+                <th>Link</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for vacancy in vacancies %}
+            <tr>
+                {% if filter_type == 'name' %}
+                <td>{{ vacancy.name }}</td>
+                <td><a href="{{ vacancy.url }}" target="_blank">View</a></td>
+                {% elif filter_type == 'salary' %}
+                <td>{{ vacancy.salary_from }}</td>
+                <td>{{ vacancy.salary_to }}</td>
+                <td><a href="{{ vacancy.url }}" target="_blank">View</a></td>
+                {% else %}
+                <td>{{ vacancy.hh_id }}</td>
+                <td>{{ vacancy.name }}</td>
+                <td>{{ vacancy.salary_from }}</td>
+                <td>{{ vacancy.salary_to }}</td>
+                <td>{{ vacancy.working_days }}</td>
+                <td><a href="{{ vacancy.url }}" target="_blank">View</a></td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        $(document).ready(function() {
+            $('#run-parse-form').on('submit', function(e) {
+                e.preventDefault();
+                $('#status-message').show();
+                $.post($(this).attr('action'), $(this).serialize(), function(response) {
+                    $('#status-message').hide();
+                    $('#total-vacancies').text(response.total_vacancies);
+                    $('#total-vacancies-display').show();
+                });
+            });
+
+            // Показать элемент с количеством вакансий, если он был скрыт
+            const totalVacancies = $('#total-vacancies').text();
+            if (totalVacancies) {
+                $('#total-vacancies-display').show();
+            }
+        });
+    </script>
+</body>
+</html>
